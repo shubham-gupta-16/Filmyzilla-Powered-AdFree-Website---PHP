@@ -1,14 +1,18 @@
 <?php
-require_once  dirname(__FILE__, 1) . '/config.php';
+require_once __DIR__ . '/Database.php';
+require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/simple_html_dom.php';
+
 const FZ_URL = 'https://filmyzilla.' . EXT . '/';
 
-require_once dirname(__FILE__, 1) . '/simple_html_dom.php';
+$database = new Database(dbservername, dbuser, dbpassword, dbname);
 
 
-function getList(string $key, int $page = 1, string $letter = 'default'): ?array
+function getList(string $key, int $page = 1, string $letter = 'default')
 {
+    global $database;
     $path = "category/$key/$letter/$page.html";
-    $response = fetchCurl(FZ_URL . $path, ['Authority: filmyzilla.services']);
+    $response = fetchCurl(FZ_URL . $path, ['Authority: filmyzilla.' . EXT]);
     if ($response == null || $response[0] == '') {
         return null;
     }
@@ -48,22 +52,24 @@ function getList(string $key, int $page = 1, string $letter = 'default'): ?array
         if ($info['listType'] == 'movie') {
             addExtraData($arr);
 
-            $docs = Config::getDocs($arr['key']);
+            $docs = $database->getDocs($arr['key']);
             if ($docs != null) {
                 $arr['viewCount'] = $docs[0];
             }
+            $imagePath = $docs[1];
             if ($docs != null && $docs[1] != null) {
-                $arr['image'] = $docs[1];
             } else {
                 // image url
                 $keyData = explode('(', ucwords(explode('/', str_replace(['-', '.html'], [' ', ''], $arr['key']))[1]));
                 if (sizeof($keyData) > 1) {
-                    $arr['image'] = FZ_URL . 'files/images/' . str_replace([' ', '.',], ['_', ''], $arr['name'] . ' (' . $keyData[1]) . '.jpg';
+                    $imagePath = FZ_URL . 'files/images/' . str_replace([' ', '.',], ['_', ''], $arr['name'] . ' (' . $keyData[1]) . '.jpg';
                 } else {
-                    $arr['image'] = FZ_URL . 'files/images/' . str_replace([' ', '.',], ['_', ''], $arr['title']) . '.jpg';
+                    $imagePath = FZ_URL . 'files/images/' . str_replace([' ', '.',], ['_', ''], $arr['title']) . '.jpg';
                 }
             }
-            Config::insertDocs($arr['key'], $arr['title'], $arr['image']);
+            $arr['image'] = FZ_URL . $imagePath;
+
+            $database->insertDocs($arr['key'], $arr['title'], $arr['image']);
         }
         $info['list'][] = $arr;
     }
@@ -73,13 +79,13 @@ function getList(string $key, int $page = 1, string $letter = 'default'): ?array
 function getFileLink(string $path, string $referer, string $cookie): ?string
 {
     // $headers = [];
-    // $headers[] = 'Authority: filmyzilla.services';
+    // $headers[] = 'Authority: filmyzilla.' . EXT;
     // $headers[] = 'Sec-Fetch-Site: same-origin';
     // $headers[] = 'Referer: ' . FZ_URL . $referer;
     // $headers[] = 'Cookie: ' . $cookie;
 
     $headers = array();
-    $headers[] = 'Authority: filmyzilla.services';
+    $headers[] = 'Authority: filmyzilla.' . EXT;
     $headers[] = 'Referer: ' . FZ_URL . $referer;
     $headers[] = 'Cookie: ' . $cookie;
 
@@ -89,7 +95,7 @@ function getFileLink(string $path, string $referer, string $cookie): ?string
 
 function getServerInfo(string $path): ?array
 {
-    $response = fetchCurl(FZ_URL . $path, ['Authority: filmyzilla.services']);
+    $response = fetchCurl(FZ_URL . $path, ['Authority: filmyzilla.' . EXT]);
     // todo check response
     $serverPage = str_get_html($response[0]);
 
@@ -107,7 +113,8 @@ function getServerInfo(string $path): ?array
 
 function getDocumentInfo(string $key): ?array
 {
-    $response = fetchCurl(FZ_URL . 'movie/' . $key, ['Authority: filmyzilla.services']);
+    global $database;
+    $response = fetchCurl(FZ_URL . 'movie/' . $key, ['Authority: filmyzilla.' . EXT]);
     // todo check response
     if ($response == null || $response[0] == '') {
         return null;
@@ -121,7 +128,7 @@ function getDocumentInfo(string $key): ?array
     addExtraData($info);
     $info['image'] = $container->find('.imglarge', 0)->find('img', 0)->src;
 
-    Config::updateDocs($key, $info['image']);
+    $database->updateDocs($key, $info['image']);
 
     foreach ($container->find('p.black') as $pBlack) {
         $info[str_replace(' :- ', '', $pBlack->find('font', 0)->plaintext)] = trim($pBlack->find('font', 1)->plaintext);
@@ -250,79 +257,3 @@ function getDefaultHeader(array $array, string $key, string $default)
 
 
 // SQL INSERTER
-class Config
-{
-
-    private static $db;
-
-    private static function db(): mysqli
-    {
-        if (self::$db == null) {
-            $db = new mysqli(dbservername, dbuser, dbpassword, dbname);
-            $db->options(MYSQLI_OPT_INT_AND_FLOAT_NATIVE, TRUE);
-            $db->set_charset("utf8");
-            self::$db = $db;
-        }
-        return self::$db;
-    }
-    // check db connected or not
-    public static function isConnected(): bool
-    {
-        $db = self::db();
-        if ($db == null) {
-            return false;
-        }
-        if ($db->connect_error) {
-            return false;
-        }
-        return true;
-    }
-
-    public static function insertDocs(string $key, string $title, string $image)
-    {
-        $db = self::db();
-        if (!self::isConnected()) return false;
-        $stmt = $db->prepare("INSERT INTO docs (fz_key, fz_title, fz_image) VALUES (?, ?, ?)");
-        $stmt->bind_param("sss", $key, $title, $image);
-        $stmt->execute();
-        $stmt->close();
-        return true;
-    }
-
-    // update docs's image if it's not exist
-    public static function updateDocs(string $key, string $image)
-    {
-        $db = self::db();
-        if (!self::isConnected()) return false;
-        $stmt = $db->prepare("UPDATE docs SET fz_image = ?, view_count = view_count + 1 WHERE fz_key = ?");
-        $stmt->bind_param("ss", $image, $key);
-        $stmt->execute();
-        $stmt->close();
-        return true;
-    }
-
-    // get view_count and fz_image from db
-    public static function getDocs(string $key)
-    {
-        $db = self::db();
-        if (!self::isConnected()) return false;
-        $stmt = $db->prepare("SELECT view_count, fz_image FROM docs WHERE fz_key = ?");
-        $stmt->bind_param("s", $key);
-        $stmt->execute();
-        $stmt->bind_result($view_count, $fz_image);
-        $stmt->fetch();
-        $stmt->close();
-        return [$view_count, $fz_image];
-    }
-
-    private static function query(string $query): mysqli_result
-    {
-        $db = self::db();
-        $result = $db->query($query);
-        return $result;
-    }
-    public static function close()
-    {
-        self::$db->close();
-    }
-}
