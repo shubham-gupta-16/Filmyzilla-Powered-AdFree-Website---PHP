@@ -80,7 +80,7 @@ function getFileLink(string $path, string $referer, string $cookie): ?string
 
     $headers = array();
     $headers[] = 'Authority: filmyzilla.services';
-    $headers[] = 'Referer: https://filmyzilla.services/server/2326/Avengers-endgame-2019-hindi-dubbed-full-movie-bluray-original-audio.mp4.html';
+    $headers[] = 'Referer: ' . FZ_URL . $referer;
     $headers[] = 'Cookie: ' . $cookie;
 
     $response = fetchCurl(FZ_URL . $path, $headers);
