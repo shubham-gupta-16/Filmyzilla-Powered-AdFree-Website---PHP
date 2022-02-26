@@ -1,5 +1,9 @@
 <?php
 require_once './includes/ui.php';
+require_once './includes/App.php';
+
+$database = App::getDatabase();
+$database->filterImages();
 
 $keyList = [
     '406/Popular-tv-shows-(hindi-dubbed)' => 'Popular TV Shows (Hindi Dubbed)',

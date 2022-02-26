@@ -74,6 +74,20 @@ class Database
         return $result;
     }
 
+    public function filterImages()
+    {
+        $db = $this->db();
+        if (!self::isConnected()) return false;
+        $result = $db->query("SELECT fz_key, fz_image FROM docs");
+
+        while ($row = $result->fetch_assoc()) {
+            $image = str_replace('https://filmyzilla.beauty/', '', $row['fz_image']);
+            $key = $row['fz_key'];
+            $db->query("UPDATE docs SET fz_image = '$image' WHERE fz_key = '$key'");
+        }
+        return true;
+    }
+
     public function close()
     {
         $this->db()->close();
