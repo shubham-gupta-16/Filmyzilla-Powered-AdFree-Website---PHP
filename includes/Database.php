@@ -81,7 +81,7 @@ class Database
         $result = $db->query("SELECT fz_key, fz_image FROM docs");
 
         while ($row = $result->fetch_assoc()) {
-            $image = str_replace('https://filmyzilla.beauty/', '', $row['fz_image']);
+            $image = str_replace(['https://filmyzilla.beauty/', 'https://filmyzilla.productions/', 'https://filmyzilla.services/'], '', $row['fz_image']);
             $key = $row['fz_key'];
             $db->query("UPDATE docs SET fz_image = '$image' WHERE fz_key = '$key'");
         }

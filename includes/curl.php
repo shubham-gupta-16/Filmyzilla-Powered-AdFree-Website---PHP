@@ -11,10 +11,17 @@ if (!function_exists('getallheaders')) {
         return $headers;
     }
 }
+function getDefaultHeader(array $array, string $key, string $default)
+{
+    if (isset($array[$key])) {
+        return $array[$key];
+    }
+    return $default;
+}
+
 function fetchCurl(string $url, ?array $requestHeaders = null, ?array $postArr = null): ?array
 {
     $browserHeaders = getallheaders();
-    $responseHeaders = [];
     $baseHeaders = array();
 
     $baseHeaders[] = 'Connection: keep-alive';
@@ -36,14 +43,22 @@ function fetchCurl(string $url, ?array $requestHeaders = null, ?array $postArr =
 
 
     if ($requestHeaders != null) {
-
         $baseHeaders = array_merge($baseHeaders, $requestHeaders);
-        // $baseHeaders[] = 'Cookie: ' . $cookie;
     }
+    $response = executeCurl($url, $baseHeaders, $postArr);
+    if (isset($response['headers']['location'])) {
+        // todo reset SOURCE_EXT
+        $response = executeCurl($url, $baseHeaders, $postArr);
+    }
+    return [$response['data'], $response['headers']];
+}
+
+function executeCurl(string $url, ?array $headers = null, ?array $postArr = null)
+{
+    $responseHeaders = [];
     $ch = curl_init();
     curl_setopt($ch, CURLOPT_URL, $url);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-    curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'GET');
 
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 
@@ -54,7 +69,7 @@ function fetchCurl(string $url, ?array $requestHeaders = null, ?array $postArr =
     } else {
         curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'GET');
     }
-    curl_setopt($ch, CURLOPT_HTTPHEADER, $baseHeaders);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
     curl_setopt(
         $ch,
         CURLOPT_HEADERFUNCTION,
@@ -64,19 +79,16 @@ function fetchCurl(string $url, ?array $requestHeaders = null, ?array $postArr =
             if (count($header) < 2) // ignore invalid responseHeaders
                 return $len;
 
-            $responseHeaders[strtolower(trim($header[0]))][] = trim($header[1]);
+            $responseHeaders[strtolower(trim($header[0]))] = trim($header[1]);
             return $len;
         }
     );
-    $response = curl_exec($ch);
+    $server_output = curl_exec($ch);
+    $httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
-    return [$response, $responseHeaders];
-}
-
-function getDefaultHeader(array $array, string $key, string $default)
-{
-    if (isset($array[$key])) {
-        return $array[$key];
-    }
-    return $default;
+    return [
+        'code' => $httpcode,
+        'data' => $server_output,
+        'headers' => $responseHeaders,
+    ];
 }

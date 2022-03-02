@@ -7,7 +7,7 @@ if (isset($_GET['page'])) {
     $page = $_GET['page'];
 }
 if (!isset($_GET['key'])) {
-    die("here");
+    die("Key Not Found");
     // header('Location: ./');
 }
 

@@ -10,6 +10,8 @@ $info = getServerInfo($_GET['path']);
 // todo check server
 // header set-cookie
 header('Set-Cookie: ' . $info['cookie']);
+
+echo $info['cookie'];
 // die(json_encode($info));
 build_Header('Servers');
 // echo json_encode($info);
