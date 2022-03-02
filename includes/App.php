@@ -20,6 +20,7 @@ class App
     }
     public static function setExt(string $ext): void
     {
+        self::$EXT = $ext;
         file_put_contents(__DIR__ . '/SOURCE_EXT', $ext);
     }
 

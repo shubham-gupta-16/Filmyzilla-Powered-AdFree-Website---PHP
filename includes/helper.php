@@ -10,7 +10,7 @@ function getList(string $key, int $page = 1, string $letter = 'default'): ?array
 {
     global $database;
     $path = "category/$key/$letter/$page.html";
-    $response = fetchCurl(App::getSourceUrl() . $path, [App::getAuthorityHeader()]);
+    $response = fetchCurl($path, [App::getAuthorityHeader()]);
     // die(json_encode($response));
     if ($response == null || $response[0] == '') {
         return null;
@@ -40,7 +40,7 @@ function getList(string $key, int $page = 1, string $letter = 'default'): ?array
 function getDocumentInfo(string $key): ?array
 {
     global $database;
-    $response = fetchCurl(App::getSourceUrl() . 'movie/' . $key, [App::getAuthorityHeader()]);
+    $response = fetchCurl('movie/' . $key, [App::getAuthorityHeader()]);
     if ($response == null || $response[0] == '') {
         return null;
     }
@@ -55,13 +55,13 @@ function getFileLink(string $path, string $referer, string $cookie): ?string
     $headers[] = 'Referer: ' . App::getSourceUrl() . $referer;
     // $headers[] = 'Cookie: ' . $cookie;
 
-    $response = fetchCurl(App::getSourceUrl() . $path, $headers);
+    $response = fetchCurl($path, $headers);
     return $response[1]['location'];
 }
 
 function getServerInfo(string $path): ?array
 {
-    $response = fetchCurl(App::getSourceUrl() . $path, ['Authority: filmyzilla.' . App::getExt()]);
+    $response = fetchCurl($path, ['Authority: filmyzilla.' . App::getExt()]);
     // todo check response
     $serverPage = str_get_html($response[0]);
 
