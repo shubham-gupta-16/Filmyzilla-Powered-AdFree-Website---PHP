@@ -11,6 +11,7 @@ function getList(string $key, int $page = 1, string $letter = 'default'): ?array
     global $database;
     $path = "category/$key/$letter/$page.html";
     $response = fetchCurl(App::getSourceUrl() . $path, [App::getAuthorityHeader()]);
+    // die(json_encode($response));
     if ($response == null || $response[0] == '') {
         return null;
     }
@@ -52,10 +53,10 @@ function getFileLink(string $path, string $referer, string $cookie): ?string
     $headers = array();
     $headers[] = App::getAuthorityHeader();
     $headers[] = 'Referer: ' . App::getSourceUrl() . $referer;
-    $headers[] = 'Cookie: ' . $cookie;
+    // $headers[] = 'Cookie: ' . $cookie;
 
     $response = fetchCurl(App::getSourceUrl() . $path, $headers);
-    return $response[1]['location'][0];
+    return $response[1]['location'];
 }
 
 function getServerInfo(string $path): ?array
@@ -66,9 +67,9 @@ function getServerInfo(string $path): ?array
 
     $info = [];
     // header set-cookie
-    $info['cookie'] = $response[1]['set-cookie'][0];
+    $info['cookie'] = $response[1]['set-cookie'];
     $info['referer'] = $path;
-    // header('Set-Cookie: ' . $response[1]['set-cookie'][0]);
+    // header('Set-Cookie: ' . $response[1]['set-cookie']);
 
     foreach ($serverPage->find('a.dwnLink[title]') as $listed) {
         $info['links'][] = str_replace(App::getSourceUrl(), '', $listed->href);
