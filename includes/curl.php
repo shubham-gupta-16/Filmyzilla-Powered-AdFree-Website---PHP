@@ -49,7 +49,7 @@ function fetchCurl(string $path, ?array $requestHeaders = null, ?array $postArr 
     $response = executeCurl($url, $baseHeaders, $postArr);
     if (isset($response['headers']['location'])) {
         $ext = pathinfo(parse_url($response['headers']['location'], PHP_URL_HOST), PATHINFO_EXTENSION);
-        App::getExt($ext);
+        App::setExt($ext);
         $response = executeCurl(App::getSourceUrl() . $path, $baseHeaders, $postArr);
     }
     return [$response['data'], $response['headers']];
