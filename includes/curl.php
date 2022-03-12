@@ -19,7 +19,7 @@ function getDefaultHeader(array $array, string $key, string $default)
     return $default;
 }
 
-function fetchCurl(string $path, ?array $requestHeaders = null, ?array $postArr = null): ?array
+function fetchCurl(string $path, ?array $requestHeaders = null, ?array $postArr = null, bool $setExt = false): ?array
 {
     $url = App::getSourceUrl() . $path;
     $browserHeaders = getallheaders();
@@ -47,7 +47,7 @@ function fetchCurl(string $path, ?array $requestHeaders = null, ?array $postArr 
         $baseHeaders = array_merge($baseHeaders, $requestHeaders);
     }
     $response = executeCurl($url, $baseHeaders, $postArr);
-    if (isset($response['headers']['location'])) {
+    if (isset($response['headers']['location']) && $setExt) {
         $ext = pathinfo(parse_url($response['headers']['location'], PHP_URL_HOST), PATHINFO_EXTENSION);
         App::setExt($ext);
         $response = executeCurl(App::getSourceUrl() . $path, $baseHeaders, $postArr);

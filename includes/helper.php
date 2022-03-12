@@ -10,7 +10,7 @@ function getList(string $key, int $page = 1, string $letter = 'default'): ?array
 {
     global $database;
     $path = "category/$key/$letter/$page.html";
-    $response = fetchCurl($path, [App::getAuthorityHeader()]);
+    $response = fetchCurl($path, [App::getAuthorityHeader()], null, true);
     // die(json_encode($response));
     if ($response == null || $response[0] == '') {
         return null;
